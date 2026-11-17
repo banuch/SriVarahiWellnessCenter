@@ -106,6 +106,46 @@ function createApp(db, { sessionSecret = crypto.randomBytes(32).toString('hex') 
     });
   });
 
+  // Coaches, Supervisors and Admins add a Customer without logging out.
+  const requireStaff = (req, res, next) =>
+    req.user && ['coach', 'supervisor', 'admin'].includes(req.user.role)
+      ? next()
+      : res.status(403).render('error', { message: 'Only Coaches, Supervisors and Admins can add customers.' });
+
+  app.get('/customers/new', requireLogin, requireStaff, (req, res) => {
+    res.render('add-customer', { form: {} });
+  });
+  app.post('/customers', requireLogin, requireStaff, (req, res) => {
+    const form = { ...req.body };
+    try {
+      const customer = m.addCustomer(db, req.user, form);
+      const sponsor = customer.sponsor_id ? m.findById(db, customer.sponsor_id) : null;
+      flash(
+        req,
+        'success',
+        `${customer.name} was added as a Customer ${sponsor ? `under ${sponsor.name}` : 'directly under the center'}. ` +
+          `They can log in with phone ${customer.phone} and the password you set.`
+      );
+      res.redirect(req.user.role === 'admin' ? '/admin' : '/dashboard');
+    } catch (err) {
+      if (!(err instanceof m.ValidationError)) throw err;
+      delete form.password;
+      res.status(400).render('add-customer', { form, error: err.message });
+    }
+  });
+
+  app.post('/members/:id/make-coach', requireLogin, requireStaff, (req, res) => {
+    try {
+      const coach = m.makeCoach(db, req.user, Number(req.params.id));
+      flash(req, 'success', `${coach.name} is now a Coach. Their referral code is ${coach.referral_code}.`);
+    } catch (err) {
+      if (!(err instanceof m.ValidationError)) throw err;
+      flash(req, 'error', err.message);
+    }
+    const back = req.get('referer');
+    res.redirect(back && back.startsWith(baseUrl(req)) ? back : req.user.role === 'admin' ? '/admin' : '/dashboard');
+  });
+
   app.get('/members/:id', requireLogin, (req, res) => {
     const id = Number(req.params.id);
     const member = m.findById(db, id);
@@ -121,6 +161,7 @@ function createApp(db, { sessionSecret = crypto.randomBytes(32).toString('hex') 
       team: m.buildTeam(db, id),
       directCustomers: m.countDirectCustomers(db, id),
       target: m.getPromotionTarget(db),
+      canMakeCoach: m.canMakeCoach(req.user, member),
     });
   });
 
@@ -157,6 +198,15 @@ function createApp(db, { sessionSecret = crypto.randomBytes(32).toString('hex') 
     adminAction((req) => {
       m.setLevel(db, Number(req.params.id), req.body.level);
       flash(req, 'success', 'Level updated.');
+    })
+  );
+
+  app.post(
+    '/admin/members/:id/role',
+    requireAdmin,
+    adminAction((req) => {
+      const u = m.setRole(db, Number(req.params.id), req.body.role, req.body.level);
+      flash(req, 'success', `${u.name} is now ${m.roleLabel(u)}.${u.referral_code ? ` Referral code: ${u.referral_code}.` : ''}`);
     })
   );
 

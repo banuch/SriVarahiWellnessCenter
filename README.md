@@ -8,8 +8,11 @@ A web app for the center's Customers, Coaches and Supervisors, with referral cod
 |---|---|
 | Joining | Anyone can join as a **Customer** or a **Coach**, with an optional referral code. Without a code, they join directly under the center. |
 | Referring | Coaches and Supervisors each get a referral code and link. They can refer Customers and Coaches. Customers cannot refer anyone. |
+| Adding customers | Coaches and Supervisors can also use **Add customer** on their dashboard to sign up a Customer in person; the Customer joins their team and counts toward promotion. Admins can do the same from the Members page, under any referral code or directly under the center. |
+| Customer → Coach | The Admin, or the Customer's own Coach/Supervisor, can click **Make Coach** (Members page or the Customer's page). The new Coach stays in the same team, gets a referral code, and no longer counts as a direct customer. Earlier promotions are not undone. |
 | Promotion | A Coach is promoted to **Supervisor L1** automatically once they have *N* active direct Customers. *N* is 5 by default; Admin → Settings changes it. |
 | Levels | The Admin raises or lowers Supervisor levels (L2, L3, …, no limit). |
+| Changing position | The Admin can set anyone's **Position** to Customer, Coach or Supervisor (with a level), from the Members page or the member's page. They keep their sponsor and place in the team. Someone with people directly under them cannot be made a Customer. A Coach who still has enough direct customers is promoted again automatically when their next customer joins. |
 | Team chart | **Supervisors** are grouped by line. 1st line = the nearest Supervisors in your team, 2nd line = Supervisors in their teams, and so on. **Coaches** and **Customers** show only the people you referred yourself. Supervisors stay in the team that promoted them. |
 | Admin | Search and filter members, open anyone's chart, see the whole-center tree, set levels, block or unblock members, and change the promotion target. |
 

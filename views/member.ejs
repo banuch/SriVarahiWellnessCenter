@@ -1,16 +1,22 @@
 <%- include('partials/head', { title: member.name }) %>
 <p><a href="javascript:history.back()">← Back</a></p>
 <%- include('partials/profile') %>
+<% if (canMakeCoach && currentUser.role !== 'admin') { %>
+  <section class="card">
+    <h3>Make <%= member.name %> a Coach</h3>
+    <p class="muted">They will get a referral code and can refer Customers and Coaches. They stay in the same team<%= currentUser.role === 'admin' ? '' : ' as your Coach' %>, and no longer count as a direct customer.</p>
+    <form method="post" action="/members/<%= member.id %>/make-coach" class="inline"
+          onsubmit="return confirm('Make this customer a Coach?')">
+      <button class="btn small">Make Coach</button>
+    </form>
+  </section>
+<% } %>
 <% if (currentUser.role === 'admin') { %>
   <section class="card">
     <h3>Admin actions</h3>
     <div class="actions">
-      <% if (member.role === 'supervisor') { %>
-        <form method="post" action="/admin/members/<%= member.id %>/level" class="inline">
-          <label>Level <input name="level" type="number" min="1" value="<%= member.level || 1 %>" class="tiny"></label>
-          <button class="btn small">Save level</button>
-        </form>
-      <% } %>
+      <strong>Position</strong>
+      <%- include('partials/position-form', { u: member }) %>
       <form method="post" action="/admin/members/<%= member.id %>/status" class="inline">
         <input type="hidden" name="status" value="<%= member.status === 'active' ? 'blocked' : 'active' %>">
         <button class="btn small <%= member.status === 'active' ? 'danger' : '' %>"><%= member.status === 'active' ? 'Block' : 'Unblock' %></button>

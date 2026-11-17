@@ -99,3 +99,102 @@ test('blocked members cannot log in and their code cannot be used', () => {
   assert.throws(() => m.authenticate(db, coach.phone, 'secret1'), /blocked/);
   assert.throws(() => join(db, 'C1', 'customer', coach), /not active/);
 });
+
+test('coach adds a customer to their own team, counting toward promotion', () => {
+  const db = openDb(':memory:');
+  m.setPromotionTarget(db, 1);
+  const coach = join(db, 'Coach A', 'coach');
+  // A role or refCode sent in the form is ignored: it is always a Customer under this coach.
+  const cust = m.addCustomer(db, coach, { name: 'Walk In', phone: '9111111111', password: 'secret1', role: 'coach', refCode: 'OTHER' });
+  assert.equal(cust.role, 'customer');
+  assert.equal(cust.sponsor_id, coach.id);
+  assert.equal(m.findById(db, coach.id).role, 'supervisor');
+  assert.ok(m.authenticate(db, '9111111111', 'secret1'));
+});
+
+test('admin adds a customer under a code or directly under the center', () => {
+  const db = openDb(':memory:');
+  const admin = { role: 'admin', status: 'active' };
+  const coach = join(db, 'Coach A', 'coach');
+  const a = m.addCustomer(db, admin, { name: 'Cust A', phone: '9222222222', password: 'secret1', refCode: coach.referral_code.toLowerCase() });
+  assert.equal(a.sponsor_id, coach.id);
+  const b = m.addCustomer(db, admin, { name: 'Cust B', phone: '9222222223', password: 'secret1', refCode: '' });
+  assert.equal(b.sponsor_id, null);
+  assert.throws(() => m.addCustomer(db, admin, { name: 'Cust C', phone: '9222222224', password: 'secret1', refCode: 'NOPE' }), /not found/);
+});
+
+test('customers cannot add customers', () => {
+  const db = openDb(':memory:');
+  const coach = join(db, 'Coach A', 'coach');
+  const cust = join(db, 'Cust A', 'customer', coach);
+  assert.throws(() => m.addCustomer(db, cust, { name: 'X', phone: '9333333333', password: 'secret1' }), m.ValidationError);
+});
+
+test('sponsor or admin can make a customer a Coach; others cannot', () => {
+  const db = openDb(':memory:');
+  const coach = join(db, 'Coach A', 'coach');
+  const other = join(db, 'Coach B', 'coach');
+  const c1 = join(db, 'C1', 'customer', coach);
+  const c2 = join(db, 'C2', 'customer', coach);
+  assert.throws(() => m.makeCoach(db, other, c1.id), m.ValidationError);
+  assert.throws(() => m.makeCoach(db, c2, c1.id), m.ValidationError);
+  const promoted = m.makeCoach(db, coach, c1.id);
+  assert.equal(promoted.role, 'coach');
+  assert.equal(promoted.sponsor_id, coach.id);
+  assert.match(promoted.referral_code, /^SV[A-Z0-9]{6}$/);
+  assert.equal(m.countDirectCustomers(db, coach.id), 1);
+  // The new Coach can refer people with their code.
+  assert.equal(join(db, 'C3', 'customer', promoted).sponsor_id, promoted.id);
+  // Admin can promote any customer; coaches cannot be "made Coach" again.
+  assert.equal(m.makeCoach(db, { role: 'admin', status: 'active' }, c2.id).role, 'coach');
+  assert.throws(() => m.makeCoach(db, coach, c2.id), /Only Customers/);
+});
+
+test('blocked customers cannot be made Coaches', () => {
+  const db = openDb(':memory:');
+  const coach = join(db, 'Coach A', 'coach');
+  const c1 = join(db, 'C1', 'customer', coach);
+  m.setStatus(db, c1.id, 'blocked');
+  assert.throws(() => m.makeCoach(db, coach, c1.id), /Unblock/);
+});
+
+test('admin can set any position: customer, coach or supervisor with a level', () => {
+  const db = openDb(':memory:');
+  const coach = join(db, 'Coach A', 'coach');
+  const cust = join(db, 'C1', 'customer', coach);
+
+  const sup = m.setRole(db, cust.id, 'supervisor', 3);
+  assert.equal(sup.role, 'supervisor');
+  assert.equal(sup.level, 3);
+  assert.equal(sup.sponsor_id, coach.id);
+  assert.match(sup.referral_code, /^SV[A-Z0-9]{6}$/);
+  assert.ok(sup.promoted_at);
+
+  const back = m.setRole(db, cust.id, 'coach');
+  assert.equal(back.role, 'coach');
+  assert.equal(back.level, null);
+  assert.equal(back.referral_code, sup.referral_code);
+
+  const c = m.setRole(db, cust.id, 'customer');
+  assert.equal(c.role, 'customer');
+  assert.equal(c.referral_code, null);
+  assert.throws(() => m.setRole(db, cust.id, 'admin'), m.ValidationError);
+  assert.throws(() => m.setRole(db, cust.id, 'supervisor', 0), /Level/);
+});
+
+test('members with people under them cannot be made Customers', () => {
+  const db = openDb(':memory:');
+  const coach = join(db, 'Coach A', 'coach');
+  join(db, 'C1', 'customer', coach);
+  assert.throws(() => m.setRole(db, coach.id, 'customer'), /directly under them/);
+  assert.equal(m.findById(db, coach.id).role, 'coach');
+});
+
+test('making a coach a Customer can complete their sponsor’s promotion', () => {
+  const db = openDb(':memory:');
+  m.setPromotionTarget(db, 1);
+  const coach = join(db, 'Coach A', 'coach');
+  const coach2 = join(db, 'Coach B', 'coach', coach);
+  m.setRole(db, coach2.id, 'customer');
+  assert.equal(m.findById(db, coach.id).role, 'supervisor');
+});

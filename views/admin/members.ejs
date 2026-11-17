@@ -1,5 +1,5 @@
 <%- include('../partials/head', { title: 'Members' }) %>
-<h1>Members</h1>
+<h1>Members <a class="btn small" href="/customers/new">Add customer</a></h1>
 <section class="cards four stats">
   <div class="card"><h3>Supervisors</h3><p class="big"><%= counts.supervisor || 0 %></p></div>
   <div class="card"><h3>Coaches</h3><p class="big"><%= counts.coach || 0 %></p></div>
@@ -31,12 +31,7 @@
       <td><%= u.role === 'customer' ? '—' : u.direct_customers %></td>
       <td><%= u.status %></td>
       <td><div class="row-actions">
-        <% if (u.role === 'supervisor') { %>
-          <form method="post" action="/admin/members/<%= u.id %>/level" class="inline">
-            <input name="level" type="number" min="1" value="<%= u.level || 1 %>" class="tiny" aria-label="Level">
-            <button class="btn small">Set</button>
-          </form>
-        <% } %>
+        <%- include('../partials/position-form', { u }) %>
         <form method="post" action="/admin/members/<%= u.id %>/status" class="inline">
           <input type="hidden" name="status" value="<%= u.status === 'active' ? 'blocked' : 'active' %>">
           <button class="btn small <%= u.status === 'active' ? 'danger' : 'outline' %>"><%= u.status === 'active' ? 'Block' : 'Unblock' %></button>

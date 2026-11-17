@@ -117,6 +117,19 @@ function register(db, input) {
   }
 }
 
+/**
+ * A Coach, Supervisor or Admin adds a Customer on their behalf.
+ * Coaches and Supervisors always add the Customer to their own team.
+ * Admins may name a sponsor by referral code, or leave it empty to add directly under the center.
+ */
+function addCustomer(db, staff, input) {
+  if (!staff || staff.status !== 'active' || !['coach', 'supervisor', 'admin'].includes(staff.role)) {
+    throw new ValidationError('Only Coaches, Supervisors and Admins can add customers.');
+  }
+  const refCode = staff.role === 'admin' ? input.refCode : staff.referral_code;
+  return register(db, { ...input, role: 'customer', refCode });
+}
+
 /** Promote a Coach to Supervisor L1 once they reach the direct-customer target. */
 function checkPromotion(db, userId) {
   const user = findById(db, userId);
@@ -135,7 +148,76 @@ function promoteEligibleCoaches(db) {
   return promoted;
 }
 
+/** Whether `actor` may turn this Customer into a Coach: the Admin, or the Customer's own sponsor. */
+function canMakeCoach(actor, customer) {
+  if (!actor || !customer || customer.role !== 'customer' || customer.status !== 'active') return false;
+  if (actor.role === 'admin') return true;
+  return ['coach', 'supervisor'].includes(actor.role) && actor.status === 'active' && customer.sponsor_id === actor.id;
+}
+
+/**
+ * Promote a Customer to Coach. They keep their sponsor (so they stay in the same team as a Coach),
+ * get a referral code, and can start referring people. The sponsor's earlier promotion is never undone.
+ */
+function makeCoach(db, actor, customerId) {
+  const customer = findById(db, customerId);
+  if (!customer || customer.role !== 'customer') throw new ValidationError('Only Customers can be made Coaches.');
+  if (customer.status !== 'active') throw new ValidationError('Unblock this member before making them a Coach.');
+  if (!canMakeCoach(actor, customer)) {
+    throw new ValidationError('Only the Admin or the Customer’s own Coach/Supervisor can make them a Coach.');
+  }
+  db.prepare("UPDATE users SET role = 'coach', referral_code = ? WHERE id = ?").run(generateReferralCode(db), customerId);
+  return findById(db, customerId);
+}
+
 // ---------- admin actions ----------
+
+/**
+ * Admin sets any member's position: Customer, Coach, or Supervisor (with a level).
+ * The member keeps their sponsor and their place in the team.
+ * Someone with people directly under them cannot become a Customer, because Customers have no team.
+ */
+function setRole(db, userId, role, level) {
+  const user = findById(db, userId);
+  if (!user || user.role === 'admin') throw new ValidationError('Member not found.');
+  if (!['customer', 'coach', 'supervisor'].includes(role)) throw new ValidationError('Please choose Customer, Coach or Supervisor.');
+
+  let n = null;
+  if (role === 'supervisor') {
+    n = level === undefined || level === '' ? user.level || 1 : parseInt(level, 10);
+    if (!Number.isInteger(n) || n < 1) throw new ValidationError('Level must be 1 or higher.');
+  }
+
+  if (role === 'customer') {
+    const { count } = db.prepare('SELECT COUNT(*) AS count FROM users WHERE sponsor_id = ?').get(userId);
+    if (count > 0) {
+      throw new ValidationError(
+        `${user.name} has ${count} member(s) directly under them, and Customers cannot have a team.`
+      );
+    }
+  }
+
+  db.exec('BEGIN');
+  try {
+    const code = role === 'customer' ? null : user.referral_code || generateReferralCode(db);
+    const promotedAt =
+      role !== 'supervisor' ? null : user.role === 'supervisor' ? user.promoted_at : new Date().toISOString().slice(0, 19).replace('T', ' ');
+    db.prepare('UPDATE users SET role = ?, level = ?, referral_code = ?, promoted_at = ? WHERE id = ?').run(
+      role,
+      n,
+      code,
+      promotedAt,
+      userId
+    );
+    // A new Customer may complete their sponsor's promotion target.
+    if (role === 'customer' && user.sponsor_id) checkPromotion(db, user.sponsor_id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return findById(db, userId);
+}
 
 function setLevel(db, userId, level) {
   const user = findById(db, userId);
@@ -271,9 +353,13 @@ module.exports = {
   countDirectCustomers,
   authenticate,
   register,
+  addCustomer,
+  canMakeCoach,
+  makeCoach,
   checkPromotion,
   promoteEligibleCoaches,
   setLevel,
+  setRole,
   setStatus,
   setPromotionTarget,
   listMembers,

@@ -158,3 +158,5 @@ td .row-actions { display: flex; gap: .4rem; align-items: center; }
   .topbar nav { gap: .7rem; font-size: .9rem; }
   .copyrow { flex-direction: column; }
 }
+/* Admin position control: the level box only matters for Supervisors. */
+.position-form:not(:has(option[value="supervisor"]:checked)) input[name="level"] { display: none; }

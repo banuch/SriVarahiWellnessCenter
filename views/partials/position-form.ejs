@@ -1,0 +1,10 @@
+<%# locals: u (member). Admin control to set Customer / Coach / Supervisor + level. %>
+<form method="post" action="/admin/members/<%= u.id %>/role" class="inline position-form">
+  <select name="role" aria-label="Position">
+    <% ['customer', 'coach', 'supervisor'].forEach(function (r) { %>
+      <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r[0].toUpperCase() + r.slice(1) %></option>
+    <% }) %>
+  </select>
+  <input name="level" type="number" min="1" value="<%= u.level || 1 %>" class="tiny" aria-label="Supervisor level" title="Supervisor level">
+  <button class="btn small">Save</button>
+</form>
