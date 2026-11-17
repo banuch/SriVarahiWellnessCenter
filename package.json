@@ -1,0 +1,21 @@
+{
+  "name": "sri-varahi-wellness-center",
+  "version": "1.0.0",
+  "description": "Member, referral and team web app for Sri Varahi Wellness Center",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "seed:demo": "node scripts/seed-demo.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "ejs": "^3.1.10",
+    "express": "^4.22.3",
+    "express-session": "^1.19.0"
+  }
+}

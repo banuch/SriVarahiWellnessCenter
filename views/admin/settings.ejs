@@ -1,0 +1,11 @@
+<%- include('../partials/head', { title: 'Settings' }) %>
+<section class="card narrow">
+  <h1>Settings</h1>
+  <form method="post" action="/admin/settings" class="form">
+    <label>Direct customers needed for a Coach to become Supervisor L1
+      <input name="promotion_target" type="number" min="1" max="1000" value="<%= target %>" required></label>
+    <p class="muted">When you lower this number, Coaches who already meet it are promoted right away.</p>
+    <button class="btn">Save</button>
+  </form>
+</section>
+<%- include('../partials/foot') %>

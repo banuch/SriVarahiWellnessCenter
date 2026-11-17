@@ -1,0 +1,44 @@
+<%#
+  Team chart, laid out like the center's reference picture:
+  root person on top, then Supervisors (by line), Coaches, Customers.
+  locals: rootName, rootLabel, team, linkable
+%>
+<% const nth = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({1:'st',2:'nd',3:'rd'}[n % 10] || 'th')); %>
+<% const person = (p) => { %>
+  <li class="<%= p.status === 'blocked' ? 'blocked' : '' %>">
+    <% if (linkable) { %><a href="/members/<%= p.id %>"><%= p.name %></a><% } else { %><%= p.name %><% } %>
+    <% if (p.role === 'supervisor') { %><span class="tag">L<%= p.level || 1 %></span><% } %>
+    <% if (p.status === 'blocked') { %><span class="tag grey">blocked</span><% } %>
+  </li>
+<% } %>
+<section class="chart">
+  <div class="chart-root"><%= rootName %><% if (rootLabel) { %><small><%= rootLabel %></small><% } %></div>
+  <div class="chart-groups">
+    <div class="group sup">
+      <div class="group-head">Supervisors</div>
+      <% if (!team.supervisorLines.length) { %>
+        <div class="box empty">No supervisors yet</div>
+      <% } %>
+      <% team.supervisorLines.forEach(function (l) { %>
+        <div class="box line">
+          <div class="line-head"><%= nth(l.line) %> Line <span class="count"><%= l.members.length %></span></div>
+          <ul><% l.members.forEach(person) %></ul>
+        </div>
+      <% }) %>
+    </div>
+    <div class="group coach">
+      <div class="group-head">Coaches <span class="count"><%= team.coaches.length %></span></div>
+      <div class="box">
+        <% if (!team.coaches.length) { %><p class="empty">No coaches yet</p><% } %>
+        <ul><% team.coaches.forEach(person) %></ul>
+      </div>
+    </div>
+    <div class="group cust">
+      <div class="group-head">Customers <span class="count"><%= team.customers.length %></span></div>
+      <div class="box">
+        <% if (!team.customers.length) { %><p class="empty">No customers yet</p><% } %>
+        <ul><% team.customers.forEach(person) %></ul>
+      </div>
+    </div>
+  </div>
+</section>
