@@ -1,0 +1,16 @@
+<%- include('partials/head', { title: 'Dashboard' }) %>
+<%- include('partials/profile') %>
+<% if (referralLink) { %>
+  <section class="card">
+    <h3>Invite people</h3>
+    <p>Your referral code: <strong class="code"><%= member.referral_code %></strong></p>
+    <div class="copyrow">
+      <input id="reflink" value="<%= referralLink %>" readonly>
+      <button class="btn small" type="button" data-copy="reflink">Copy</button>
+    </div>
+    <p class="muted">Share this link. New Customers and Coaches who join with it are added to your team.</p>
+  </section>
+  <h2>My team</h2>
+  <%- include('partials/chart', { rootName: member.name, rootLabel: roleLabel(member), team, linkable: true }) %>
+<% } %>
+<%- include('partials/foot') %>

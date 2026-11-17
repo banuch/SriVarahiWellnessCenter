@@ -1,0 +1,5 @@
+<%- include('../partials/head', { title: 'Center tree' }) %>
+<h1>Whole center</h1>
+<p class="muted">Members who joined without a referral code sit directly under the center. Click any name to open that member's own team chart.</p>
+<%- include('../partials/chart', { rootName: 'Sri Varahi Wellness Center', rootLabel: team.total + ' members', team, linkable: true }) %>
+<%- include('../partials/foot') %>

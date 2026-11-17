@@ -1,0 +1,50 @@
+<%- include('../partials/head', { title: 'Members' }) %>
+<h1>Members</h1>
+<section class="cards four stats">
+  <div class="card"><h3>Supervisors</h3><p class="big"><%= counts.supervisor || 0 %></p></div>
+  <div class="card"><h3>Coaches</h3><p class="big"><%= counts.coach || 0 %></p></div>
+  <div class="card"><h3>Customers</h3><p class="big"><%= counts.customer || 0 %></p></div>
+  <div class="card"><h3>Total</h3><p class="big"><%= (counts.supervisor || 0) + (counts.coach || 0) + (counts.customer || 0) %></p></div>
+</section>
+<form method="get" action="/admin" class="filters">
+  <input name="q" value="<%= q %>" placeholder="Search name, phone or code">
+  <select name="role">
+    <option value="">All roles</option>
+    <% ['supervisor','coach','customer'].forEach(function (r) { %>
+      <option value="<%= r %>" <%= role === r ? 'selected' : '' %>><%= r[0].toUpperCase() + r.slice(1) %></option>
+    <% }) %>
+  </select>
+  <button class="btn small">Search</button>
+</form>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Code</th><th>Joined under</th><th>Direct customers</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>
+  <% if (!members.length) { %><tr><td colspan="8" class="muted">No members found.</td></tr><% } %>
+  <% members.forEach(function (u) { %>
+    <tr class="<%= u.status === 'blocked' ? 'blocked' : '' %>">
+      <td><a href="/members/<%= u.id %>"><%= u.name %></a></td>
+      <td><%= u.phone %></td>
+      <td><span class="badge <%= u.role %>"><%= roleLabel(u) %></span></td>
+      <td><%= u.referral_code || '—' %></td>
+      <td><%= u.sponsor_name || 'Center' %></td>
+      <td><%= u.role === 'customer' ? '—' : u.direct_customers %></td>
+      <td><%= u.status %></td>
+      <td><div class="row-actions">
+        <% if (u.role === 'supervisor') { %>
+          <form method="post" action="/admin/members/<%= u.id %>/level" class="inline">
+            <input name="level" type="number" min="1" value="<%= u.level || 1 %>" class="tiny" aria-label="Level">
+            <button class="btn small">Set</button>
+          </form>
+        <% } %>
+        <form method="post" action="/admin/members/<%= u.id %>/status" class="inline">
+          <input type="hidden" name="status" value="<%= u.status === 'active' ? 'blocked' : 'active' %>">
+          <button class="btn small <%= u.status === 'active' ? 'danger' : 'outline' %>"><%= u.status === 'active' ? 'Block' : 'Unblock' %></button>
+        </form>
+      </div></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+</div>
+<%- include('../partials/foot') %>

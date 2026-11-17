@@ -1,0 +1,26 @@
+<%- include('partials/head', { title: member.name }) %>
+<p><a href="javascript:history.back()">← Back</a></p>
+<%- include('partials/profile') %>
+<% if (currentUser.role === 'admin') { %>
+  <section class="card">
+    <h3>Admin actions</h3>
+    <div class="actions">
+      <% if (member.role === 'supervisor') { %>
+        <form method="post" action="/admin/members/<%= member.id %>/level" class="inline">
+          <label>Level <input name="level" type="number" min="1" value="<%= member.level || 1 %>" class="tiny"></label>
+          <button class="btn small">Save level</button>
+        </form>
+      <% } %>
+      <form method="post" action="/admin/members/<%= member.id %>/status" class="inline">
+        <input type="hidden" name="status" value="<%= member.status === 'active' ? 'blocked' : 'active' %>">
+        <button class="btn small <%= member.status === 'active' ? 'danger' : '' %>"><%= member.status === 'active' ? 'Block' : 'Unblock' %></button>
+      </form>
+    </div>
+    <% if (member.referral_code) { %><p class="muted">Referral code: <strong><%= member.referral_code %></strong></p><% } %>
+  </section>
+<% } %>
+<% if (member.role !== 'customer') { %>
+  <h2><%= member.name %>'s team</h2>
+  <%- include('partials/chart', { rootName: member.name, rootLabel: roleLabel(member), team, linkable: true }) %>
+<% } %>
+<%- include('partials/foot') %>

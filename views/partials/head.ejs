@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= typeof title !== 'undefined' ? title + ' · ' : '' %>Sri Varahi Wellness Center</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><span class="leaf">🌿</span> Sri Varahi Wellness Center</a>
+  <nav>
+    <% if (currentUser) { %>
+      <% if (currentUser.role === 'admin') { %>
+        <a href="/admin">Members</a>
+        <a href="/admin/tree">Center tree</a>
+        <a href="/admin/settings">Settings</a>
+      <% } else { %>
+        <a href="/dashboard">My dashboard</a>
+      <% } %>
+      <span class="who"><%= currentUser.name %> · <%= roleLabel(currentUser) %></span>
+      <form method="post" action="/logout" class="inline"><button class="link">Log out</button></form>
+    <% } else { %>
+      <a href="/login">Log in</a>
+      <a class="btn small" href="/register">Join</a>
+    <% } %>
+  </nav>
+</header>
+<main class="container">
+<% if (flash) { %><div class="alert <%= flash.type %>"><%= flash.text %></div><% } %>
